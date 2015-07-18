@@ -78,6 +78,10 @@ namespace :backup do
     Rake::Task["s3:upload"].invoke(gz_name)
     Rake::Task["backup:clean"].reenable
     Rake::Task["backup:clean"].invoke
+  end
+
+  desc "Create database backup and upload compressed file to remote server"
+  task :run => [:upload] do
     Rake::Task["s3:report"].invoke
   end
 
