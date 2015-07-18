@@ -10,7 +10,12 @@ GEM
     dotenv (1.0.2)
     jmespath (1.0.2)
       multi_json (~> 1.0)
+    mail (2.6.3)
+      mime-types (>= 1.16, < 3)
+    mime-types (2.4.3)
     multi_json (1.11.2)
+    pony (1.11)
+      mail (>= 2.0)
     rake (10.4.2)
 
 PLATFORMS
@@ -19,4 +24,5 @@ PLATFORMS
 DEPENDENCIES
   aws-sdk (~> 2)
   dotenv
+  pony (~> 1.11)
   rake (~> 10.4.2)

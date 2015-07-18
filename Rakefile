@@ -1,5 +1,6 @@
 require 'dotenv'
 require 'aws-sdk'
+require 'pony'
 
 Dotenv.load
 
@@ -17,6 +18,30 @@ def prettify_byte(s)
   end
   comps << str if str.size > 0
   comps.reverse.join(",")
+end
+
+def find_s3_object(key)
+  s3 = Aws::S3::Client.new
+  bucket_name = ENV["AWS_BUCKET"]
+  s3.list_objects(:bucket => bucket_name).contents.select { |t| t.key == key }.first
+end
+
+def send_mail(subject:, body:)
+  Pony.mail({
+    :to   => ENV['MAIL_DEVELOPER'],
+    :from => ENV['MAIL_USER'],
+    :subject => subject,
+    :body    => body,
+    :via => :smtp,
+    :via_options => {
+      :address              => ENV['MAIL_SERVER'],
+      :port                 => ENV['MAIL_SERVER_PORT'],
+      :enable_starttls_auto => true,
+      :user_name            => ENV['MAIL_USER'],
+      :password             => ENV['MAIL_PASSWORD'],
+      :authentication       => :plain, # :plain, :login, :cram_md5, no auth by default
+    }
+  })
 end
 
 namespace :backup do
@@ -53,6 +78,38 @@ namespace :backup do
     Rake::Task["s3:upload"].invoke(gz_name)
     Rake::Task["backup:clean"].reenable
     Rake::Task["backup:clean"].invoke
+    Rake::Task["s3:report"].invoke
+  end
+
+end
+
+namespace :notification do
+  desc "Send a test mail"
+  task :demo do
+    puts "Notifying #{ENV['MAIL_DEVELOPER']}"
+    begin
+      send_mail subject: "notification:demo", body: "Hello there!"
+    rescue Exception => e
+      puts "Pony::mail FAILED #{e}"
+    end
+  end
+
+  task :notify_failure do
+    puts "Notifying #{ENV['MAIL_DEVELOPER']}"
+    begin
+      send_mail subject: "Mongo Backup Problem: #{today_postfix}", body: "Backup creation failure! Check logs for details."
+    rescue Exception => e
+      puts "Pony::mail FAILED #{e}"
+    end
+  end
+
+  task :notify_success, [:message] do |t, args|
+    puts "Notifying #{ENV['MAIL_DEVELOPER']}"
+    begin
+      send_mail subject: "Mongo Backup Success: #{today_postfix}", body: args.message
+    rescue Exception => e
+      puts "Pony::mail FAILED #{e}"
+    end
   end
 
 end
@@ -60,13 +117,15 @@ end
 namespace :s3 do
   desc "Report backup creation status"
   task :report do
-    s3 = Aws::S3::Client.new
-    bucket_name = ENV["AWS_BUCKET"]
-    obj = s3.list_objects(:bucket => bucket_name).contents.select { |t| t.key == backup_filename }.first
+    obj = find_s3_object(backup_filename)
     if obj.nil?
       puts "Not found on AWS bucket #{bucket_name}"
+      Rake::Task["notification:notify_failure"].invoke
     else
-      puts "Backup created successful (#{obj.key}) Size: #{prettify_byte(obj.size)} byte(s)"
+      message = "Backup created successful (#{obj.key}) Size: #{prettify_byte(obj.size)} byte(s), last_modified #{obj.last_modified}"
+      message += "\n\nDetails: #{obj}"
+      puts message
+      Rake::Task["notification:notify_success"].invoke(message)
     end
   end
 
