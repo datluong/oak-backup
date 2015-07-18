@@ -7,12 +7,16 @@ GEM
       jmespath (~> 1.0)
     aws-sdk-resources (2.1.7)
       aws-sdk-core (= 2.1.7)
+    dotenv (1.0.2)
     jmespath (1.0.2)
       multi_json (~> 1.0)
     multi_json (1.11.2)
+    rake (10.4.2)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
   aws-sdk (~> 2)
+  dotenv
+  rake (~> 10.4.2)
