@@ -30,7 +30,7 @@ namespace :backup do
   task :create => [:clean] do
     dir = "tmp/#{today_postfix}/"
     mkdir_p dir
-    host = ENV['MONGODB_HOSTNAME'] || localhost
+    host = ENV['MONGODB_HOSTNAME'] || "localhost"
     port = ENV['MONGODB_PORT'] || 27017
     db   = ENV['MONGODB_DATABASE']
     user = ENV['MONGODB_USERNAME']
